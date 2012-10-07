@@ -1,6 +1,9 @@
 /*
  * ExtIO wrapper for librtlsdr
- * Copyright (C) 2012 Ian Gilmour (MM6DOS) , Youssef Touil
+ * Copyleft by José Araújo [josemariaaraujo@gmail.com]
+ * Don't care about licenses (DWTFYW), but per GNU I think I'm required to leave the following here:
+ *
+ * Based on original work from Ian Gilmour (MM6DOS) and Youssef Touil from SDRSharp
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,6 +81,12 @@ static int buffer_sizes[] = { //in kBytes
 
 static int buffer_len;
 
+typedef struct {
+	char vendor[256], product[256], serial[256];
+} device;
+
+static device *connected_devices = NULL;
+
 static rtlsdr_dev_t *dev = NULL;
 static int device_count = 0;
 
@@ -107,23 +116,26 @@ HWND h_dialog=NULL;
 extern "C"
 bool  LIBRTL_API __stdcall InitHW(char *name, char *model, int& type)
 {
-	char vendor[256], product[256], serial[256];
-
+//	MessageBox(NULL, TEXT("InitHW"),NULL, MB_OK);
 	device_count = rtlsdr_get_device_count();
 	if (!device_count) 
 	{
-		MessageBox(NULL,L"No RTLSDR devices found",
-				   L"ExtIO RTLSDR",
+		MessageBox(NULL,TEXT("No RTLSDR devices found"),
+				   TEXT("ExtIO RTL"),
 				   MB_ICONERROR | MB_OK);
 
 		return FALSE;
 	}
-	rtlsdr_get_device_usb_strings(0, vendor, product, serial);
-	vendor[15]=0;
-	product[15]=0;
+
+	connected_devices = new (std::nothrow) device[device_count];
+	for( int i=0; i<device_count;i++)
+		rtlsdr_get_device_usb_strings(0, connected_devices[i].vendor, connected_devices[i].product, connected_devices[i].serial);
 	
-	strcpy_s(name,16,vendor);
-	strcpy_s(model,16,product);
+	strcpy_s(name,15,connected_devices[0].vendor);
+	strcpy_s(model,15,connected_devices[0].product);
+	name[15]=0;
+	model[15]=0;
+
 	type = EXTIO_HWTYPE_16B; /* ExtIO type 16-bit samples */
 	
 //	fprintf(stderr, "São %d dispositivos. O primeiro é %s %s\n", device_count, name, model);
@@ -149,7 +161,7 @@ bool  LIBRTL_API __stdcall OpenHW()
 //		MessageBox(NULL, TEXT("OpenHW Fudeu"),NULL, MB_OK);
 		return FALSE;
 	}
-	rtlsdr_set_sample_rate(dev, samplerates[SAMPLERATE_DEFAULT].value);
+	r = rtlsdr_set_sample_rate(dev, samplerates[SAMPLERATE_DEFAULT].value);
 	if(r < 0)
 		return FALSE;
 
@@ -161,9 +173,33 @@ bool  LIBRTL_API __stdcall OpenHW()
 }
 
 extern "C"
+long LIBRTL_API __stdcall SetHWLO(long freq)
+{
+	long r;
+
+//	int t=Stop_Thread(); //Stop thread if there is one...
+
+	r=rtlsdr_set_center_freq(dev, freq);
+//	if (t==0)
+//		Start_Thread();//and restart it if there was
+
+	if (r==0) {
+		MessageBox(NULL, TEXT("PLL not locked!"),TEXT("Error!"), MB_OK|MB_ICONERROR);
+		return -1;
+	}
+
+	if (r!=freq )
+		WinradCallBack(-1,WINRAD_LOCHANGE,0,NULL);
+
+	return 0;
+}
+
+extern "C"
 int LIBRTL_API __stdcall StartHW(long freq)
 {
 //	MessageBox(NULL, TEXT("StartHW"),NULL, MB_OK);
+
+	if (!dev) return -1;
 
 	short_buf = new (std::nothrow) short[buffer_len];
 	if (short_buf==0) {
@@ -176,30 +212,12 @@ int LIBRTL_API __stdcall StartHW(long freq)
 		delete short_buf;
 		return -1;
 	}
+
+    SetHWLO(freq);
+
+	EnableWindow(GetDlgItem(h_dialog,IDC_DEVICE),FALSE);
+
 	return buffer_len/2;
-}
-
-extern "C"
-long LIBRTL_API __stdcall SetHWLO(long freq)
-{
-	long r;
-	int t;
-
-	t=Stop_Thread(); //Stop thread if there is one...
-
-	r=rtlsdr_set_center_freq(dev, freq);
-	if (t==0)
-		Start_Thread();//and restart it if there was
-
-	if (r==0) {
-		MessageBox(NULL, TEXT("PLL not locked!"),TEXT("Error!"), MB_OK|MB_ICONERROR);
-		return -1;
-	}
-
-	if (r!=freq )
-		WinradCallBack(-1,WINRAD_LOCHANGE,0,NULL);
-
-	return 0;
 }
 
 extern "C"
@@ -231,6 +249,7 @@ void LIBRTL_API __stdcall StopHW()
 //	MessageBox(NULL, TEXT("StopHW"),NULL, MB_OK);
 	Stop_Thread();
 	delete short_buf;
+	EnableWindow(GetDlgItem(h_dialog,IDC_DEVICE),TRUE);
 
 	
 }
@@ -238,6 +257,9 @@ void LIBRTL_API __stdcall StopHW()
 extern "C"
 void LIBRTL_API __stdcall CloseHW()
 {
+//	MessageBox(NULL, TEXT("CloseHW"),NULL, MB_OK);
+	rtlsdr_close(dev);
+	dev=NULL;
 	if (h_dialog!=NULL)
 		DestroyWindow(h_dialog);
 	
@@ -340,8 +362,17 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
     {
         case WM_INITDIALOG:
 		{	
-			Button_SetCheck(GetDlgItem(hwndDlg,IDC_AUTOGAIN),BST_CHECKED);
+			Button_SetCheck(GetDlgItem(hwndDlg,IDC_TUNERAGC),BST_CHECKED);
+			Button_SetCheck(GetDlgItem(hwndDlg,IDC_RTLAGC),BST_UNCHECKED);
 			
+			for (int i=0; i<device_count;i++)
+			{
+				TCHAR str[255];
+				_stprintf_s(str,255,  TEXT("(%d) - %S %S %S"),i+1, connected_devices[i].product,connected_devices[i].vendor,connected_devices[i].serial);
+				ComboBox_AddString(GetDlgItem(hwndDlg,IDC_DEVICE),str);
+			}
+			ComboBox_SetCurSel(GetDlgItem(hwndDlg,IDC_DEVICE),0);
+
 			for (int i=0; i<(sizeof(samplerates)/sizeof(sr_t));i++)
 			{
 				ComboBox_AddString(GetDlgItem(hwndDlg,IDC_SAMPLERATE),samplerates[i].name);
@@ -352,7 +383,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 			for (int i=0; i<(sizeof(buffer_sizes)/sizeof(int));i++)
 			{
 				TCHAR str[255];
-				_stprintf(str, TEXT("%d kB"),buffer_sizes[i]); 
+				_stprintf_s(str,255, TEXT("%d kB"),buffer_sizes[i]); 
 				ComboBox_AddString(GetDlgItem(hwndDlg,IDC_BUFFER),str);
 			}
 			ComboBox_SetCurSel(GetDlgItem(hwndDlg,IDC_BUFFER),BUFFER_DEFAULT);
@@ -378,7 +409,24 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
         case WM_COMMAND:
             switch (GET_WM_COMMAND_ID(wParam, lParam))
             {
-                case IDC_AUTOGAIN:
+                case IDC_RTLAGC:
+				{
+					if(Button_GetCheck(GET_WM_COMMAND_HWND(wParam, lParam)) == BST_CHECKED) //it is checked
+					{
+						rtlsdr_set_agc_mode(dev,1);
+						
+//						MessageBox(NULL,TEXT("It is checked"),TEXT("Message"),0);
+					}
+					else //it has been unchecked
+					{
+						rtlsdr_set_agc_mode(dev,0);
+						
+			
+//						MessageBox(NULL,TEXT("It is unchecked"),TEXT("Message"),0);
+					}
+					return TRUE;
+				}
+				case IDC_TUNERAGC:
 				{
 					if(Button_GetCheck(GET_WM_COMMAND_HWND(wParam, lParam)) == BST_CHECKED) //it is checked
 					{
@@ -396,7 +444,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 
 						int pos=-SendMessage(hGain,  TBM_GETPOS  , (WPARAM)0, (LPARAM)0);
 						TCHAR str[255];
-						_stprintf(str, TEXT("%2.1f dB"),(float) pos/10); 
+						_stprintf_s(str,255, TEXT("%2.1f dB"),(float) pos/10); 
 						Static_SetText(GetDlgItem(hwndDlg,IDC_GAINVALUE),str);
 						
 						rtlsdr_set_tuner_gain(dev,pos);
@@ -426,6 +474,21 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 						WinradCallBack(-1,WINRAD_SRCHANGE,0,NULL);// Signal application
                     }
                     return TRUE;
+				case IDC_DEVICE:
+					if(GET_WM_COMMAND_CMD(wParam, lParam) == CBN_SELCHANGE)
+                    { 
+						rtlsdr_close(dev);
+						dev=NULL;
+						if(rtlsdr_open(&dev,ComboBox_GetCurSel(GET_WM_COMMAND_HWND(wParam, lParam))) < 0) 
+						{
+							MessageBox(NULL,TEXT("Cound't open device!"),
+										TEXT("ExtIO RTL"),
+										MB_ICONERROR | MB_OK);
+							return TRUE;
+						}
+						rtlsdr_set_sample_rate(dev, samplerates[SAMPLERATE_DEFAULT].value);
+                    }
+                    return TRUE;
 
 			}
             break;
@@ -443,7 +506,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 				
 				SendMessage(hGain,  TBM_SETPOS  , (WPARAM)TRUE, (LPARAM)-pos);
 				TCHAR str[255];
-				_stprintf(str, TEXT("%2.1f  dBm"),(float) pos/10); 
+				_stprintf_s(str,255, TEXT("%2.1f  dBm"),(float) pos/10); 
 				Static_SetText(GetDlgItem(hwndDlg,IDC_GAINVALUE),str);
 				
 				if (pos!=last_gain)
