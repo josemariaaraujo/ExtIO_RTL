@@ -1,0 +1,16 @@
+ExtIO_RTL
+======================================================================
+ExtIO wrapper for librtlsdr.
+Supports multiple dongles and on-the-fly change of gain, samplerate and buffer size.
+Tested with HDSDR.
+
+How to install:
+	If needed install WinUSB drivers for your RTL dongle using Zadig - http://sourceforge.net/projects/libwdi/files/zadig/
+	If needed install HDSDR - http://www.hdsdr.de/
+	Copy "EXT_RTL.dll" from http://github.com/josemariaaraujo/ExtIO_RTL/blob/master/Release/ExtIO_RTL.dll (click "View Raw") to the HDSDR folder.
+
+No other files are needed. Sources are in http://github.com/josemariaaraujo  
+Latest version of librtlsdr and libusbx was used to make the dll.
+Report issues in github.
+Licenses? DWTFYW
+
