@@ -44,6 +44,9 @@
 
 #define EXTIO_HWTYPE_16B	3
 
+#define MAX_PPM	1000
+#define MIN_PPM	-1000
+
 typedef struct sr {
 	uint32_t value;
 	TCHAR *name;
@@ -183,10 +186,11 @@ long LIBRTL_API __stdcall SetHWLO(long freq)
 //	if (t==0)
 //		Start_Thread();//and restart it if there was
 
-	if (r==0) {
+	if (r!=0) {
 		MessageBox(NULL, TEXT("PLL not locked!"),TEXT("Error!"), MB_OK|MB_ICONERROR);
 		return -1;
 	}
+	r=rtlsdr_get_center_freq(dev);
 
 	if (r!=freq )
 		WinradCallBack(-1,WINRAD_LOCHANGE,0,NULL);
@@ -197,7 +201,7 @@ long LIBRTL_API __stdcall SetHWLO(long freq)
 extern "C"
 int LIBRTL_API __stdcall StartHW(long freq)
 {
-//	MessageBox(NULL, TEXT("StartHW"),NULL, MB_OK);
+	//MessageBox(NULL, TEXT("StartHW"),NULL, MB_OK);
 
 	if (!dev) return -1;
 
@@ -364,6 +368,8 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 		{	
 			Button_SetCheck(GetDlgItem(hwndDlg,IDC_TUNERAGC),BST_CHECKED);
 			Button_SetCheck(GetDlgItem(hwndDlg,IDC_RTLAGC),BST_UNCHECKED);
+ 
+			SendMessage(GetDlgItem(hwndDlg,IDC_PPM_S), UDM_SETRANGE  , (WPARAM)TRUE, (LPARAM)MAX_PPM | (MIN_PPM << 16));
 			
 			for (int i=0; i<device_count;i++)
 			{
@@ -409,6 +415,21 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
         case WM_COMMAND:
             switch (GET_WM_COMMAND_ID(wParam, lParam))
             {
+				case IDC_PPM:
+					if(GET_WM_COMMAND_CMD(wParam, lParam) == EN_CHANGE)
+                    { 
+                        TCHAR ppm[255];
+						Edit_GetText((HWND) lParam, ppm, 255 );
+						if (!rtlsdr_set_freq_correction(dev, _ttoi(ppm)))
+							WinradCallBack(-1,WINRAD_LOCHANGE,0,NULL);
+					//	else
+					//	{
+					//		TCHAR str[255];
+					//		_stprintf_s(str,255, TEXT("O valor é %d"), _ttoi(ppm));
+					//		MessageBox(NULL, str, NULL, MB_OK);
+					//	}
+                    }
+                    return TRUE;
                 case IDC_RTLAGC:
 				{
 					if(Button_GetCheck(GET_WM_COMMAND_HWND(wParam, lParam)) == BST_CHECKED) //it is checked
@@ -494,6 +515,8 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
             break;
 		case WM_VSCROLL:
 			//if (LOWORD(wParam)!=TB_THUMBTRACK && LOWORD(wParam)!=TB_ENDTRACK)
+
+			if ((HWND)lParam==hGain)
 			{
 				
 				int pos = -SendMessage(hGain,  TBM_GETPOS  , (WPARAM)0, (LPARAM)0);
@@ -516,6 +539,11 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 				}			
 				
 				/* MessageBox(NULL, str, NULL, MB_OK);*/
+				return TRUE;
+			}
+			if ((HWND)lParam==GetDlgItem(hwndDlg,IDC_PPM_S))
+			{
+	//			MessageBox(NULL,TEXT("ola"),NULL, MB_OK);
 				return TRUE;
 			}
 			/*	TCHAR str[255];

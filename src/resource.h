@@ -10,3 +10,5 @@
 #define IDC_RTLAGC                              1005
 #define IDC_GAINVALUE                           1006
 #define IDC_DEVICE                              1007
+#define IDC_PPM                                 1009
+#define IDC_PPM_S                               1011
