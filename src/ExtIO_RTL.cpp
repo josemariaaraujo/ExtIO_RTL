@@ -60,8 +60,7 @@ static sr_t samplerates[] = {
 	{ 1800000, TEXT("1.8 Msps") },
 	{ 2400000, TEXT("2.4 Msps") },
 	{ 2880000, TEXT("2.88 Msps")},
-	{ 3200000, TEXT("3.2 Msps") },
-	{ 3600000, TEXT("3.6 Msps") }
+	{ 3200000, TEXT("3.2 Msps") }
 };
 
 #define SAMPLERATE_DEFAULT 5 // 2.4 Msps
@@ -408,7 +407,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 			}
 			SendMessage(hGain,  TBM_SETPOS  , (WPARAM)TRUE, (LPARAM)-gains[0]);
 			EnableWindow(hGain,FALSE);
-			Static_SetText(GetDlgItem(hwndDlg,IDC_GAINVALUE),TEXT("Auto"));
+			Static_SetText(GetDlgItem(hwndDlg,IDC_GAINVALUE),TEXT("AGC"));
 
 			return TRUE;
 		}
@@ -454,7 +453,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 						rtlsdr_set_tuner_gain_mode(dev,0);
 						
 						EnableWindow(hGain,FALSE);
-						Static_SetText(GetDlgItem(hwndDlg,IDC_GAINVALUE),TEXT("Auto"));
+						Static_SetText(GetDlgItem(hwndDlg,IDC_GAINVALUE),TEXT("AGC"));
 //						MessageBox(NULL,TEXT("It is checked"),TEXT("Message"),0);
 					}
 					else //it has been unchecked
