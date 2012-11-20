@@ -113,6 +113,7 @@ void (* WinradCallBack)(int, int, float, void *) = NULL;
 static INT_PTR CALLBACK MainDlgProc(HWND, UINT, WPARAM, LPARAM);
 HWND h_dialog=NULL;
 
+int pll_locked=0;
 
 
 extern "C"
@@ -184,11 +185,23 @@ long LIBRTL_API __stdcall SetHWLO(long freq)
 	r=rtlsdr_set_center_freq(dev, freq);
 //	if (t==0)
 //		Start_Thread();//and restart it if there was
+	if (r!=pll_locked)
+	{
+		pll_locked=r;
+		if (pll_locked==0)
+			Static_SetText(GetDlgItem(h_dialog,IDC_PLL),TEXT("PLL LOCKED"));
+		else
+			Static_SetText(GetDlgItem(h_dialog,IDC_PLL),TEXT("PLL NOT LOCKED"));
 
+		InvalidateRect(h_dialog, NULL, TRUE);
+		UpdateWindow(h_dialog);
+	}
 	if (r!=0) {
-		MessageBox(NULL, TEXT("PLL not locked!"),TEXT("Error!"), MB_OK|MB_ICONERROR);
+		//MessageBox(NULL, TEXT("PLL not locked!"),TEXT("Error!"), MB_OK|MB_ICONERROR);
 		return -1;
 	}
+
+
 	r=rtlsdr_get_center_freq(dev);
 
 	if (r!=freq )
@@ -360,6 +373,8 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 	static int *gains;
 	static HWND hGain;
 	static int last_gain=0;
+	static HBRUSH BRUSH_RED=CreateSolidBrush(RGB(255,0,0));
+	static HBRUSH BRUSH_GREEN=CreateSolidBrush(RGB(0,255,0));
 
    	switch (uMsg)
     {
@@ -568,6 +583,22 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 			delete[] gains;
 			h_dialog=NULL;
             return TRUE;
+			break;
+
+
+		case WM_CTLCOLORSTATIC:
+			if ( IDC_PLL == GetDlgCtrlID((HWND)lParam))
+			{
+				HDC hdc = (HDC)wParam;
+				if (pll_locked==0)
+				{
+					SetBkColor(hdc, RGB(0,255,0));
+					return (INT_PTR)BRUSH_GREEN;
+				} else {
+					SetBkColor(hdc, RGB(255,0,0));
+					return (INT_PTR)BRUSH_RED;
+				}
+			}
 			break;
 
         /*

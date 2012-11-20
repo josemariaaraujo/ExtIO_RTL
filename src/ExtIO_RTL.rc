@@ -34,4 +34,5 @@ FONT 8, "Ms Shell Dlg"
     LTEXT           "Frequency Correction:", IDC_STATIC, 7, 112, 70, 8, SS_LEFT
     CTEXT           "ppm", IDC_STATIC, 63, 125, 20, 11, SS_CENTER
     CTEXT           "Tuner Gain", IDC_STATIC, 87, 7, 60, 10, SS_CENTER
+    CTEXT           "PLL LOCKED", IDC_PLL, 17, 82, 62, 30, SS_CENTER | SS_CENTERIMAGE
 }

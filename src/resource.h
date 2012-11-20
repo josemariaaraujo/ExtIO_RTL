@@ -5,6 +5,7 @@
 #define IDD_RTL_SETTINGS                        100
 #define IDC_SAMPLERATE                          1000
 #define IDC_GAIN                                1001
+#define IDC_PLL                                 1002
 #define IDC_BUFFER                              1003
 #define IDC_TUNERAGC                            1004
 #define IDC_RTLAGC                              1005
