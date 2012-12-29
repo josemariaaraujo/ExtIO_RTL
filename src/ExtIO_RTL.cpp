@@ -64,6 +64,8 @@ static sr_t samplerates[] = {
 };
 
 #define SAMPLERATE_DEFAULT 5 // 2.4 Msps
+#define MAXRATE		3200000 
+#define MINRATE		900001 
 
 static int buffer_sizes[] = { //in kBytes
 	1,
@@ -498,6 +500,34 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 						// MessageBox(NULL, ListItem, TEXT("Item Selected"), MB_OK);
 						//TCHAR str[255];
 						//_stprintf(str, TEXT("O valor é %d"), samplerates[ComboBox_GetCurSel((HWND) lParam)].value);
+						//MessageBox(NULL, str, NULL, MB_OK);
+                    }
+					if(GET_WM_COMMAND_CMD(wParam, lParam) ==  CBN_EDITUPDATE)
+                    { 
+                        TCHAR  ListItem[256];
+
+						ComboBox_GetText((HWND) lParam,ListItem,256);
+						//MessageBox(NULL, ListItem, TEXT("Item Selected"), MB_OK);
+
+						TCHAR *endptr;
+						double coeff = _tcstod(ListItem, &endptr);
+						
+						while (_istspace(*endptr)) ++endptr;
+
+						int exp = 1;	
+						switch (_totupper(*endptr)) {
+							case 'K': exp = 1024; break;
+							case 'M': exp = 1024*1024; break;
+						}
+						
+						uint32_t newrate=coeff*exp;
+						if (newrate>=MINRATE && newrate<=MAXRATE) {
+							rtlsdr_set_sample_rate(dev, newrate);
+							WinradCallBack(-1,WINRAD_SRCHANGE,0,NULL);// Signal application
+						}
+
+						//TCHAR str[255];
+						//_stprintf(str, TEXT("O valor é %d"), newrate);
 						//MessageBox(NULL, str, NULL, MB_OK);
                     }
 					//MessageBox(NULL,TEXT("Bitrate"),TEXT("Mensagem"),MB_OK);
