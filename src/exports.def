@@ -12,3 +12,12 @@ ShowGUI = _ShowGUI@0
 HideGUI = _HideGUI@0
 StartHW = _StartHW@4
 StopHW = _StopHW@0
+
+; Samplerate / Bandwidth:
+    ExtIoGetSrates                 = _ExtIoGetSrates@8
+    ExtIoGetActualSrateIdx         = _ExtIoGetActualSrateIdx@0
+    ExtIoSetSrate                  = _ExtIoSetSrate@4
+
+; Settings
+    ExtIoGetSetting                = _ExtIoGetSetting@12
+    ExtIoSetSetting                = _ExtIoSetSetting@8

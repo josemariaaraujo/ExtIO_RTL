@@ -46,26 +46,31 @@
 
 #define MAX_PPM	1000
 #define MIN_PPM	-1000
+static int ppm_default=0;
 
 typedef struct sr {
-	uint32_t value;
+	double value;
 	TCHAR *name;
 } sr_t;
 
 static sr_t samplerates[] = {
-	{  960000, TEXT("0.96 Msps") },
-	{ 1028571, TEXT("1.02 Msps") },
-	{ 1200000, TEXT("1.2 Msps") },
-	{ 1440000, TEXT("1.44 Msps") },
-	{ 1800000, TEXT("1.8 Msps") },
-	{ 2400000, TEXT("2.4 Msps") },
-	{ 2880000, TEXT("2.88 Msps")},
-	{ 3200000, TEXT("3.2 Msps") }
+	{  960000.0, TEXT("0.96 Msps") },
+	{ 1028571.0, TEXT("1.02 Msps") },
+	{ 1200000.0, TEXT("1.2 Msps") },
+	{ 1440000.0, TEXT("1.44 Msps") },
+	{ 1800000.0, TEXT("1.8 Msps") },
+	{ 2400000.0, TEXT("2.4 Msps") },
+	{ 2880000.0, TEXT("2.88 Msps")},
+	{ 3200000.0, TEXT("3.2 Msps") }
 };
 
-#define SAMPLERATE_DEFAULT 5 // 2.4 Msps
+static int samplerate_default=5; // 2.4 Msps
 #define MAXRATE		3200000 
 #define MINRATE		900001 
+
+static int TunerAGC_default=1;
+static int RTLAGC_default=0;
+static int gain_default=0;
 
 static int buffer_sizes[] = { //in kBytes
 	1,
@@ -81,7 +86,7 @@ static int buffer_sizes[] = { //in kBytes
 	1024
 };
 
-#define BUFFER_DEFAULT 6 // 64kBytes
+static int buffer_default=6;// 64kBytes
 
 static int buffer_len;
 
@@ -121,7 +126,7 @@ int pll_locked=0;
 extern "C"
 bool  LIBRTL_API __stdcall InitHW(char *name, char *model, int& type)
 {
-//	MessageBox(NULL, TEXT("InitHW"),NULL, MB_OK);
+	//MessageBox(NULL, TEXT("InitHW"),NULL, MB_OK);
 	device_count = rtlsdr_get_device_count();
 	if (!device_count) 
 	{
@@ -158,7 +163,7 @@ int LIBRTL_API __stdcall GetStatus()
 extern "C"
 bool  LIBRTL_API __stdcall OpenHW()
 {
-//	MessageBox(NULL, TEXT("OpenHW"),NULL, MB_OK);
+	//MessageBox(NULL, TEXT("OpenHW"),NULL, MB_OK);
 	int r;
 						
 	r = rtlsdr_open(&dev,0);
@@ -166,8 +171,9 @@ bool  LIBRTL_API __stdcall OpenHW()
 //		MessageBox(NULL, TEXT("OpenHW Fudeu"),NULL, MB_OK);
 		return FALSE;
 	}
-	r = rtlsdr_set_sample_rate(dev, samplerates[SAMPLERATE_DEFAULT].value);
-	if(r < 0)
+	
+	r=rtlsdr_set_sample_rate(dev, samplerates[samplerate_default].value);
+	if( r < 0)
 		return FALSE;
 
 	h_dialog=CreateDialog(hInst, MAKEINTRESOURCE(IDD_RTL_SETTINGS), NULL, (DLGPROC)MainDlgProc);
@@ -262,20 +268,132 @@ long LIBRTL_API __stdcall GetHWSR()
 }
 
 extern "C"
+int LIBRTL_API __stdcall ExtIoGetSrates( int srate_idx, double * samplerate )
+{
+	//MessageBox(NULL, TEXT("ExtIoGetSrates"),NULL, MB_OK);
+
+	if ( srate_idx < (sizeof(samplerates)/sizeof(samplerates[0])) )
+	{
+		samplerate=  &samplerates[srate_idx].value;
+		return 0;
+	}
+	return 1;	// ERROR
+}
+
+extern "C"
+int  LIBRTL_API __stdcall ExtIoGetActualSrateIdx(void)
+{
+	//MessageBox(NULL, TEXT("ExtIoGetActualSrateIdx"),NULL, MB_OK);
+//						TCHAR str[255];
+//						_stprintf(str, TEXT("Actual SR idx %d"), ComboBox_GetCurSel(GetDlgItem(h_dialog,IDC_SAMPLERATE)));
+//						MessageBox(NULL, str, NULL, MB_OK);
+	return  ComboBox_GetCurSel(GetDlgItem(h_dialog,IDC_SAMPLERATE));
+}
+
+extern "C"
+int  LIBRTL_API __stdcall ExtIoSetSrate( int srate_idx )
+{
+
+//	TCHAR str[255];
+//	_stprintf(str, TEXT("New SR idx %d"), srate_idx);
+//	MessageBox(NULL, str, NULL, MB_OK);
+
+
+	if (  srate_idx>=0 && srate_idx < (sizeof(samplerates)/sizeof(samplerates[0])) )
+	{
+//		MessageBox(NULL, TEXT("ExtIoSetSrate"),NULL, MB_OK);
+		rtlsdr_set_sample_rate(dev, samplerates[srate_idx].value);
+		ComboBox_SetCurSel(GetDlgItem(h_dialog,IDC_SAMPLERATE),srate_idx);
+		WinradCallBack(-1,WINRAD_SRCHANGE,0,NULL);// Signal application
+		return 0;
+	}
+	return 1;	// ERROR
+}
+
+extern "C"
+int   LIBRTL_API __stdcall ExtIoGetSetting( int idx, char * description, char * value )
+{
+	//MessageBox(NULL, TEXT("ExtIoGetSetting"),NULL, MB_OK);
+	switch ( idx )
+	{
+		case 0:	_snprintf( description, 1024, "%s", "SampleRateIdx" );	
+				_snprintf( value, 1024, "%d", ComboBox_GetCurSel(GetDlgItem(h_dialog,IDC_SAMPLERATE)) );		
+				return 0;
+		case 1:	_snprintf( description, 1024, "%s", "Tuner_AGC" );		
+				_snprintf( value, 1024, "%d", Button_GetCheck(GetDlgItem(h_dialog,IDC_TUNERAGC)) == BST_CHECKED ?1:0 );			
+				return 0;
+		case 2:	_snprintf( description, 1024, "%s", "RTL_AGC" );		
+				_snprintf( value, 1024, "%d", Button_GetCheck(GetDlgItem(h_dialog,IDC_RTLAGC)) == BST_CHECKED ?1:0 );	
+				return 0;
+		case 3:	{_snprintf( description, 1024, "%s", "Frequency_Correction" );		
+				TCHAR ppm[255];
+				Edit_GetText(GetDlgItem(h_dialog,IDC_PPM), ppm, 255 );		
+				_snprintf( value, 1024, "%d", _ttoi(ppm) );	
+				return 0;}
+		case 4:	{_snprintf( description, 1024, "%s", "Tuner_Gain" );		
+				int pos=-SendMessage(GetDlgItem(h_dialog,IDC_GAIN),  TBM_GETPOS  , (WPARAM)0, (LPARAM)0);
+				_snprintf( value, 1024, "%d",  pos );	
+				return 0;}
+		case 5:	_snprintf( description, 1024, "%s", "Buffer_Size" );	
+				_snprintf( value, 1024, "%d", ComboBox_GetCurSel(GetDlgItem(h_dialog,IDC_BUFFER)) );		
+				return 0;
+		default:	return -1;	// ERROR
+	}
+	return -1;	// ERROR
+}
+
+extern "C"
+void  LIBRTL_API __stdcall ExtIoSetSetting( int idx, const char * value )
+{
+	//MessageBox(NULL, TEXT(" ExtIoSetSetting"),NULL, MB_OK);
+	int tempInt;
+
+	switch ( idx )
+	{
+	case 0:		
+				tempInt = atoi( value );
+				if (  tempInt>=0 && tempInt < (sizeof(samplerates)/sizeof(samplerates[0])) )
+				{
+					samplerate_default=tempInt;
+				}
+				break;
+	case 1:		tempInt = atoi( value );
+				TunerAGC_default=tempInt?1:0;
+				break;
+	case 2:		tempInt = atoi( value );
+				RTLAGC_default=tempInt?1:0;
+				break;
+	case 3:		tempInt = atoi( value );
+				if (  tempInt>MIN_PPM && tempInt < MAX_PPM )
+				{
+					ppm_default=tempInt;
+				}
+				break;
+	case 4:		tempInt = atoi( value );
+		        gain_default=tempInt;
+				break;
+	case 5:		tempInt = atoi( value );
+				if (  tempInt>=0 && tempInt < (sizeof(buffer_sizes)/sizeof(buffer_sizes[0])) )
+				{
+				buffer_default=tempInt;
+				}
+				break;
+	}
+}
+
+extern "C"
 void LIBRTL_API __stdcall StopHW()
 {
-//	MessageBox(NULL, TEXT("StopHW"),NULL, MB_OK);
+	//MessageBox(NULL, TEXT("StopHW"),NULL, MB_OK);
 	Stop_Thread();
 	delete short_buf;
 	EnableWindow(GetDlgItem(h_dialog,IDC_DEVICE),TRUE);
-
-	
 }
 
 extern "C"
 void LIBRTL_API __stdcall CloseHW()
 {
-//	MessageBox(NULL, TEXT("CloseHW"),NULL, MB_OK);
+	//MessageBox(NULL, TEXT("CloseHW"),NULL, MB_OK);
 	rtlsdr_close(dev);
 	dev=NULL;
 	if (h_dialog!=NULL)
@@ -382,10 +500,18 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
     {
         case WM_INITDIALOG:
 		{	
-			Button_SetCheck(GetDlgItem(hwndDlg,IDC_TUNERAGC),BST_CHECKED);
-			Button_SetCheck(GetDlgItem(hwndDlg,IDC_RTLAGC),BST_UNCHECKED);
- 
+			Button_SetCheck(GetDlgItem(hwndDlg,IDC_TUNERAGC),TunerAGC_default?BST_CHECKED:BST_UNCHECKED);
+			rtlsdr_set_tuner_gain_mode(dev,TunerAGC_default?0:1);
+
+			Button_SetCheck(GetDlgItem(hwndDlg,IDC_RTLAGC),RTLAGC_default?BST_CHECKED:BST_UNCHECKED);
+			rtlsdr_set_agc_mode(dev,RTLAGC_default?1:0);
+
 			SendMessage(GetDlgItem(hwndDlg,IDC_PPM_S), UDM_SETRANGE  , (WPARAM)TRUE, (LPARAM)MAX_PPM | (MIN_PPM << 16));
+			
+			TCHAR tempStr[255];		
+			_stprintf_s(tempStr,255, TEXT("%d"), ppm_default);
+			Edit_SetText(GetDlgItem(hwndDlg,IDC_PPM), tempStr );
+			rtlsdr_set_freq_correction(dev, ppm_default);
 			
 			for (int i=0; i<device_count;i++)
 			{
@@ -395,12 +521,12 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 			}
 			ComboBox_SetCurSel(GetDlgItem(hwndDlg,IDC_DEVICE),0);
 
-			for (int i=0; i<(sizeof(samplerates)/sizeof(sr_t));i++)
+			for (int i=0; i<(sizeof(samplerates)/sizeof(samplerates[0]));i++)
 			{
 				ComboBox_AddString(GetDlgItem(hwndDlg,IDC_SAMPLERATE),samplerates[i].name);
 //				MessageBox(NULL,sample_rates[i],TEXT("Mensagem"),MB_OK);
 			}
-			ComboBox_SetCurSel(GetDlgItem(hwndDlg,IDC_SAMPLERATE),SAMPLERATE_DEFAULT);
+			ComboBox_SetCurSel(GetDlgItem(hwndDlg,IDC_SAMPLERATE),samplerate_default);
   
 			for (int i=0; i<(sizeof(buffer_sizes)/sizeof(int));i++)
 			{
@@ -408,8 +534,8 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 				_stprintf_s(str,255, TEXT("%d kB"),buffer_sizes[i]); 
 				ComboBox_AddString(GetDlgItem(hwndDlg,IDC_BUFFER),str);
 			}
-			ComboBox_SetCurSel(GetDlgItem(hwndDlg,IDC_BUFFER),BUFFER_DEFAULT);
-			buffer_len=buffer_sizes[BUFFER_DEFAULT]*1024;
+			ComboBox_SetCurSel(GetDlgItem(hwndDlg,IDC_BUFFER),buffer_default);
+			buffer_len=buffer_sizes[buffer_default]*1024;
 
 			n_gains = rtlsdr_get_tuner_gains(dev,NULL);
 			gains = new int[n_gains];
@@ -418,13 +544,24 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 			rtlsdr_get_tuner_gains(dev,gains);
 			SendMessage(hGain, TBM_SETRANGEMIN , (WPARAM)TRUE, (LPARAM)-gains[n_gains-1]);
 			SendMessage(hGain, TBM_SETRANGEMAX , (WPARAM)TRUE, (LPARAM)-gains[0]);
+			int gain_d_index=0;
 			for(int i=0; i<n_gains;i++)
 			{
 				SendMessage(hGain, TBM_SETTIC , (WPARAM)0, (LPARAM)-gains[i]);
+				if (gain_default==gains[i]) gain_d_index=i;
 			}
-			SendMessage(hGain,  TBM_SETPOS  , (WPARAM)TRUE, (LPARAM)-gains[0]);
-			EnableWindow(hGain,FALSE);
-			Static_SetText(GetDlgItem(hwndDlg,IDC_GAINVALUE),TEXT("AGC"));
+			SendMessage(hGain,  TBM_SETPOS  , (WPARAM)TRUE, (LPARAM)-gains[gain_d_index]);
+
+			if (TunerAGC_default) {
+				EnableWindow(hGain,FALSE);
+				Static_SetText(GetDlgItem(hwndDlg,IDC_GAINVALUE),TEXT("AGC"));
+			} else {
+				int pos=-SendMessage(hGain,  TBM_GETPOS  , (WPARAM)0, (LPARAM)0);
+				TCHAR str[255];
+				_stprintf_s(str,255, TEXT("%2.1f dB"),(float) pos/10); 
+				Static_SetText(GetDlgItem(hwndDlg,IDC_GAINVALUE),str);
+				rtlsdr_set_tuner_gain(dev,gains[gain_d_index]);
+			}
 
 			return TRUE;
 		}
@@ -497,7 +634,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 
                         //TCHAR  ListItem[256];
 						//ComboBox_GetLBText((HWND) lParam,ComboBox_GetCurSel((HWND) lParam),ListItem);
-						// MessageBox(NULL, ListItem, TEXT("Item Selected"), MB_OK);
+						//MessageBox(NULL, ListItem, TEXT("Item Selected"), MB_OK);
 						//TCHAR str[255];
 						//_stprintf(str, TEXT("O valor é %d"), samplerates[ComboBox_GetCurSel((HWND) lParam)].value);
 						//MessageBox(NULL, str, NULL, MB_OK);
@@ -551,7 +688,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 										MB_ICONERROR | MB_OK);
 							return TRUE;
 						}
-						rtlsdr_set_sample_rate(dev, samplerates[SAMPLERATE_DEFAULT].value);
+						rtlsdr_set_sample_rate(dev, samplerates[samplerate_default].value);
                     }
                     return TRUE;
 
