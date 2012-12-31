@@ -54,6 +54,7 @@ typedef struct sr {
 } sr_t;
 
 static sr_t samplerates[] = {
+	{  250000.0, TEXT("0.25 Msps") },
 	{  960000.0, TEXT("0.96 Msps") },
 	{ 1028571.0, TEXT("1.02 Msps") },
 	{ 1200000.0, TEXT("1.2 Msps") },
@@ -64,12 +65,22 @@ static sr_t samplerates[] = {
 	{ 3200000.0, TEXT("3.2 Msps") }
 };
 
-static int samplerate_default=5; // 2.4 Msps
+static int samplerate_default=6; // 2.4 Msps
 #define MAXRATE		3200000 
 #define MINRATE		900001 
 
+static TCHAR* directS[] = {
+	TEXT("Disabled"),
+	TEXT("I input"),
+	TEXT("Q input") 
+};
+
+static int directS_default=0; // Disabled
+
+
 static int TunerAGC_default=1;
 static int RTLAGC_default=0;
+static int OffsetT_default=1;
 static int gain_default=0;
 
 static int buffer_sizes[] = { //in kBytes
@@ -240,6 +251,7 @@ int LIBRTL_API __stdcall StartHW(long freq)
     SetHWLO(freq);
 
 	EnableWindow(GetDlgItem(h_dialog,IDC_DEVICE),FALSE);
+	EnableWindow(GetDlgItem(h_dialog,IDC_DIRECT),FALSE);
 
 	return buffer_len/2;
 }
@@ -337,6 +349,12 @@ int   LIBRTL_API __stdcall ExtIoGetSetting( int idx, char * description, char * 
 		case 5:	_snprintf( description, 1024, "%s", "Buffer_Size" );	
 				_snprintf( value, 1024, "%d", ComboBox_GetCurSel(GetDlgItem(h_dialog,IDC_BUFFER)) );		
 				return 0;
+		case 6:	_snprintf( description, 1024, "%s", "Offset_Tuning" );		
+				_snprintf( value, 1024, "%d", Button_GetCheck(GetDlgItem(h_dialog,IDC_OFFSET)) == BST_CHECKED ?1:0 );	
+				return 0;
+		case 7:	_snprintf( description, 1024, "%s", "Direct_Sampling" );		
+				_snprintf( value, 1024, "%d", ComboBox_GetCurSel(GetDlgItem(h_dialog,IDC_DIRECT)) );	
+				return 0;
 		default:	return -1;	// ERROR
 	}
 	return -1;	// ERROR
@@ -378,6 +396,12 @@ void  LIBRTL_API __stdcall ExtIoSetSetting( int idx, const char * value )
 				buffer_default=tempInt;
 				}
 				break;
+	case 6:		tempInt = atoi( value );
+				OffsetT_default=tempInt?1:0;
+				break;
+	case 7:		tempInt = atoi( value );
+				directS_default=tempInt;
+				break;
 	}
 }
 
@@ -388,6 +412,7 @@ void LIBRTL_API __stdcall StopHW()
 	Stop_Thread();
 	delete short_buf;
 	EnableWindow(GetDlgItem(h_dialog,IDC_DEVICE),TRUE);
+	EnableWindow(GetDlgItem(h_dialog,IDC_DIRECT),TRUE);
 }
 
 extern "C"
@@ -500,11 +525,21 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
     {
         case WM_INITDIALOG:
 		{	
+			for (int i=0; i<(sizeof(directS)/sizeof(directS[0]));i++)
+			{
+				ComboBox_AddString(GetDlgItem(hwndDlg,IDC_DIRECT),directS[i]);
+			}
+			ComboBox_SetCurSel(GetDlgItem(hwndDlg,IDC_DIRECT), directS_default );
+			rtlsdr_set_direct_sampling(dev, directS_default);
+
 			Button_SetCheck(GetDlgItem(hwndDlg,IDC_TUNERAGC),TunerAGC_default?BST_CHECKED:BST_UNCHECKED);
 			rtlsdr_set_tuner_gain_mode(dev,TunerAGC_default?0:1);
 
 			Button_SetCheck(GetDlgItem(hwndDlg,IDC_RTLAGC),RTLAGC_default?BST_CHECKED:BST_UNCHECKED);
 			rtlsdr_set_agc_mode(dev,RTLAGC_default?1:0);
+
+			Button_SetCheck(GetDlgItem(hwndDlg,IDC_OFFSET),OffsetT_default?BST_CHECKED:BST_UNCHECKED);
+			rtlsdr_set_offset_tuning(dev,OffsetT_default?1:0);
 
 			SendMessage(GetDlgItem(hwndDlg,IDC_PPM_S), UDM_SETRANGE  , (WPARAM)TRUE, (LPARAM)MAX_PPM | (MIN_PPM << 16));
 			
@@ -528,7 +563,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 			}
 			ComboBox_SetCurSel(GetDlgItem(hwndDlg,IDC_SAMPLERATE),samplerate_default);
   
-			for (int i=0; i<(sizeof(buffer_sizes)/sizeof(int));i++)
+			for (int i=0; i<(sizeof(buffer_sizes)/sizeof(buffer_sizes[0]));i++)
 			{
 				TCHAR str[255];
 				_stprintf_s(str,255, TEXT("%d kB"),buffer_sizes[i]); 
@@ -536,6 +571,8 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 			}
 			ComboBox_SetCurSel(GetDlgItem(hwndDlg,IDC_BUFFER),buffer_default);
 			buffer_len=buffer_sizes[buffer_default]*1024;
+
+
 
 			n_gains = rtlsdr_get_tuner_gains(dev,NULL);
 			gains = new int[n_gains];
@@ -588,14 +625,25 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 					if(Button_GetCheck(GET_WM_COMMAND_HWND(wParam, lParam)) == BST_CHECKED) //it is checked
 					{
 						rtlsdr_set_agc_mode(dev,1);
-						
 //						MessageBox(NULL,TEXT("It is checked"),TEXT("Message"),0);
 					}
 					else //it has been unchecked
 					{
 						rtlsdr_set_agc_mode(dev,0);
-						
-			
+//						MessageBox(NULL,TEXT("It is unchecked"),TEXT("Message"),0);
+					}
+					return TRUE;
+				}
+                case IDC_OFFSET:
+				{
+					if(Button_GetCheck(GET_WM_COMMAND_HWND(wParam, lParam)) == BST_CHECKED) //it is checked
+					{
+						rtlsdr_set_offset_tuning(dev,1);
+//						MessageBox(NULL,TEXT("It is checked"),TEXT("Message"),0);
+					}
+					else //it has been unchecked
+					{
+						rtlsdr_set_offset_tuning(dev,0);
 //						MessageBox(NULL,TEXT("It is unchecked"),TEXT("Message"),0);
 					}
 					return TRUE;
@@ -676,9 +724,22 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 						WinradCallBack(-1,WINRAD_SRCHANGE,0,NULL);// Signal application
                     }
                     return TRUE;
+				case IDC_DIRECT:
+					if(GET_WM_COMMAND_CMD(wParam, lParam) == CBN_SELCHANGE)
+                    { 
+						rtlsdr_set_direct_sampling(dev, ComboBox_GetCurSel(GET_WM_COMMAND_HWND(wParam, lParam)));
+						if (ComboBox_GetCurSel(GET_WM_COMMAND_HWND(wParam, lParam)) == 0)
+							if(Button_GetCheck(GetDlgItem(hwndDlg,IDC_OFFSET)) == BST_CHECKED)
+								rtlsdr_set_offset_tuning(dev,1);
+							else
+								rtlsdr_set_offset_tuning(dev,0);
+						WinradCallBack(-1,WINRAD_LOCHANGE,0,NULL);// Signal application
+                    }
+                    return TRUE;
 				case IDC_DEVICE:
 					if(GET_WM_COMMAND_CMD(wParam, lParam) == CBN_SELCHANGE)
                     { 
+						uint32_t tempSrate = rtlsdr_get_sample_rate(dev);
 						rtlsdr_close(dev);
 						dev=NULL;
 						if(rtlsdr_open(&dev,ComboBox_GetCurSel(GET_WM_COMMAND_HWND(wParam, lParam))) < 0) 
@@ -688,7 +749,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 										MB_ICONERROR | MB_OK);
 							return TRUE;
 						}
-						rtlsdr_set_sample_rate(dev, samplerates[samplerate_default].value);
+						rtlsdr_set_sample_rate(dev, tempSrate);
                     }
                     return TRUE;
 

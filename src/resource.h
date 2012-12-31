@@ -12,4 +12,6 @@
 #define IDC_GAINVALUE                           1006
 #define IDC_DEVICE                              1007
 #define IDC_PPM                                 1009
+#define IDC_OFFSET                              1010
 #define IDC_PPM_S                               1011
+#define IDC_DIRECT                              1013
