@@ -10,6 +10,7 @@ SetCallback = _SetCallback@4
 SetHWLO = _SetHWLO@4
 ShowGUI = _ShowGUI@0
 HideGUI = _HideGUI@0
+SwitchGUI = _SwitchGUI@0
 StartHW = _StartHW@4
 StopHW = _StopHW@0
 
@@ -21,3 +22,9 @@ StopHW = _StopHW@0
 ; Settings
     ExtIoGetSetting                = _ExtIoGetSetting@12
     ExtIoSetSetting                = _ExtIoSetSetting@8
+
+
+
+    GetAttenuators                 = _GetAttenuators@8
+    GetActualAttIdx                = _GetActualAttIdx@0
+    SetAttenuator                  = _SetAttenuator@4

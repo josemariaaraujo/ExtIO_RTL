@@ -81,7 +81,11 @@ static int directS_default=0; // Disabled
 static int TunerAGC_default=1;
 static int RTLAGC_default=0;
 static int OffsetT_default=1;
+
 static int gain_default=0;
+static int n_gains;
+static int last_gain;
+static int *gains;
 
 static int buffer_sizes[] = { //in kBytes
 	1,
@@ -126,6 +130,7 @@ short *short_buf = NULL;
 void (* WinradCallBack)(int, int, float, void *) = NULL;
 #define WINRAD_SRCHANGE 100
 #define WINRAD_LOCHANGE 101
+#define WINRAD_ATTCHANGE 125
 
 
 static INT_PTR CALLBACK MainDlgProc(HWND, UINT, WPARAM, LPARAM);
@@ -174,7 +179,7 @@ int LIBRTL_API __stdcall GetStatus()
 extern "C"
 bool  LIBRTL_API __stdcall OpenHW()
 {
-	//MessageBox(NULL, TEXT("OpenHW"),NULL, MB_OK);
+//	MessageBox(NULL, TEXT("OpenHW"),NULL, MB_OK);
 	int r;
 						
 	r = rtlsdr_open(&dev,0);
@@ -286,7 +291,7 @@ int LIBRTL_API __stdcall ExtIoGetSrates( int srate_idx, double * samplerate )
 
 	if ( srate_idx < (sizeof(samplerates)/sizeof(samplerates[0])) )
 	{
-		samplerate=  &samplerates[srate_idx].value;
+		*samplerate=  samplerates[srate_idx].value;
 		return 0;
 	}
 	return 1;	// ERROR
@@ -320,6 +325,56 @@ int  LIBRTL_API __stdcall ExtIoSetSrate( int srate_idx )
 		return 0;
 	}
 	return 1;	// ERROR
+}
+
+extern "C"
+int  LIBRTL_API __stdcall GetAttenuators( int atten_idx, float * attenuation )
+{
+//	MessageBox(NULL, TEXT("GetAttenuators"),NULL, MB_OK);
+
+	if ( atten_idx < n_gains )
+	{
+		*attenuation= gains[atten_idx]/10.0;
+		return 0;
+	}
+	return 1;	// End or Error
+}
+
+extern "C"
+int  LIBRTL_API __stdcall GetActualAttIdx(void)
+{
+//	MessageBox(NULL, TEXT("GetActualAttIdx"),NULL, MB_OK);
+
+	for (int i=0;i<n_gains;i++)
+		if (last_gain==gains[i]) 
+			return i;
+	return -1;
+}
+
+extern "C"
+int  LIBRTL_API __stdcall SetAttenuator( int atten_idx )
+{
+//	MessageBox(NULL, TEXT("SetAttenuator"),NULL, MB_OK);
+	
+	if ( atten_idx<0 || atten_idx > n_gains )		
+		return -1;
+
+	int pos=gains[atten_idx];
+
+	SendMessage(GetDlgItem(h_dialog,IDC_GAIN),  TBM_SETPOS  , (WPARAM)TRUE, (LPARAM)-pos);
+
+	if (Button_GetCheck(GetDlgItem(h_dialog,IDC_TUNERAGC)) == BST_UNCHECKED)
+	{
+		TCHAR str[255];
+		_stprintf_s(str,255, TEXT("%2.1f  dBm"),(float) pos/10); 
+		Static_SetText(GetDlgItem(h_dialog,IDC_GAINVALUE),str);
+		if (pos!=last_gain)
+		{
+			rtlsdr_set_tuner_gain(dev,pos);
+		}
+	}
+	last_gain=pos;
+	return 0;
 }
 
 extern "C"
@@ -441,6 +496,16 @@ void LIBRTL_API  __stdcall HideGUI()
 	return;
 }
 
+extern "C"
+void LIBRTL_API  __stdcall SwitchGUI()
+{
+	if (IsWindowVisible(h_dialog))
+		ShowWindow(h_dialog,SW_HIDE);
+	else
+		ShowWindow(h_dialog,SW_SHOW);
+	return;
+}
+
 
 extern "C"
 void LIBRTL_API __stdcall SetCallback(void (* myCallBack)(int, int, float, void *))
@@ -514,10 +579,7 @@ void ThreadProc(void *p)
 
 static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	static int n_gains;
-	static int *gains;
 	static HWND hGain;
-	static int last_gain=0;
 	static HBRUSH BRUSH_RED=CreateSolidBrush(RGB(255,0,0));
 	static HBRUSH BRUSH_GREEN=CreateSolidBrush(RGB(0,255,0));
 
@@ -599,6 +661,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 				Static_SetText(GetDlgItem(hwndDlg,IDC_GAINVALUE),str);
 				rtlsdr_set_tuner_gain(dev,gains[gain_d_index]);
 			}
+			last_gain=gains[gain_d_index];
 
 			return TRUE;
 		}
@@ -778,6 +841,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 				{
 					last_gain=pos;
 					rtlsdr_set_tuner_gain(dev,pos);
+					WinradCallBack(-1,WINRAD_ATTCHANGE,0,NULL);
 				}			
 				
 				/* MessageBox(NULL, str, NULL, MB_OK);*/
