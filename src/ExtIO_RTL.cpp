@@ -81,6 +81,7 @@ static int directS_default=0; // Disabled
 static int TunerAGC_default=1;
 static int RTLAGC_default=0;
 static int OffsetT_default=1;
+static int device_default=0;
 
 static int gain_default=0;
 static int n_gains;
@@ -179,10 +180,12 @@ int LIBRTL_API __stdcall GetStatus()
 extern "C"
 bool  LIBRTL_API __stdcall OpenHW()
 {
-//	MessageBox(NULL, TEXT("OpenHW"),NULL, MB_OK);
+	//MessageBox(NULL, TEXT("OpenHW"),NULL, MB_OK);
 	int r;
-						
-	r = rtlsdr_open(&dev,0);
+			
+	if ( device_default>=device_count) device_default=0;
+	r = rtlsdr_open(&dev,device_default);
+
 	if(r < 0) {
 //		MessageBox(NULL, TEXT("OpenHW Fudeu"),NULL, MB_OK);
 		return FALSE;
@@ -410,6 +413,9 @@ int   LIBRTL_API __stdcall ExtIoGetSetting( int idx, char * description, char * 
 		case 7:	_snprintf( description, 1024, "%s", "Direct_Sampling" );		
 				_snprintf( value, 1024, "%d", ComboBox_GetCurSel(GetDlgItem(h_dialog,IDC_DIRECT)) );	
 				return 0;
+		case 8:	_snprintf( description, 1024, "%s", "Device" );		
+				_snprintf( value, 1024, "%d", ComboBox_GetCurSel(GetDlgItem(h_dialog,IDC_DEVICE)) );	
+				return 0;
 		default:	return -1;	// ERROR
 	}
 	return -1;	// ERROR
@@ -457,6 +463,10 @@ void  LIBRTL_API __stdcall ExtIoSetSetting( int idx, const char * value )
 	case 7:		tempInt = atoi( value );
 				directS_default=tempInt;
 				break;
+	case 8:		tempInt = atoi( value );
+				device_default=tempInt;
+				break;
+
 	}
 }
 
@@ -616,7 +626,7 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPAR
 				_stprintf_s(str,255,  TEXT("(%d) - %S %S %S"),i+1, connected_devices[i].product,connected_devices[i].vendor,connected_devices[i].serial);
 				ComboBox_AddString(GetDlgItem(hwndDlg,IDC_DEVICE),str);
 			}
-			ComboBox_SetCurSel(GetDlgItem(hwndDlg,IDC_DEVICE),0);
+			ComboBox_SetCurSel(GetDlgItem(hwndDlg,IDC_DEVICE),device_default);
 
 			for (int i=0; i<(sizeof(samplerates)/sizeof(samplerates[0]));i++)
 			{

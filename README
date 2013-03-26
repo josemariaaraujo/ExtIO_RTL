@@ -2,15 +2,32 @@ ExtIO_RTL
 ======================================================================
 ExtIO wrapper for librtlsdr.
 Supports multiple dongles and on-the-fly change of gain, samplerate and buffer size.
-Tested with HDSDR.
-
-How to install:
-	If needed install WinUSB drivers for your RTL dongle using Zadig - http://sourceforge.net/projects/libwdi/files/zadig/
-	If needed install HDSDR - http://www.hdsdr.de/
-	Copy "EXT_RTL.dll" from http://github.com/josemariaaraujo/ExtIO_RTL/blob/master/Release/ExtIO_RTL.dll (click "View Raw") to the HDSDR folder.
-
-No other files are needed. Sources are in http://github.com/josemariaaraujo  
+Tested with HDSDR, fully supports new features (settings storage, HDSDR control of gain and samplerate)
+Sources are in http://github.com/josemariaaraujo  
 Latest version of librtlsdr and libusbx was used to make the dll.
 Report issues in github.
 Licenses? DWTFYW
+
+Step-by-step installation (contributed by Leif from HDSDR)
+
+* uninstall all software, delivered with the USB dongle (very important!!!)
+
+* install HDSDR from http://www.hdsdr.de/download/HDSDR_install.exe
+
+* download Zadig from http://sourceforge.net/projects/libwdi/files/zadig/
+  Windows Vista/7/8: download the newest version - Windows XP users require a special zadig_xp version!
+
+* extract Zadig using 7-Zip ( http://www.7-zip.org ) or Winrar
+
+* install and start Zadig: press "Install Driver" to install the WinUSB drivers after selecting the right device(s).
+Problems occur when the original driver (delivered with the USB dongle) is still installed!
+These drivers sometimes do not get uninstalled correctly.
+In this case, click Options and enable "List All Devices", then choose the RTL-device and press "Replace Driver".
+
+* download ExtIO_RTL.DLL from https://github.com/josemariaaraujo/ExtIO_RTL/raw/master/Release/ExtIO_RTL.dll
+
+* copy downloaded file into your HDSDR installation directory (default=C:\Program Files (x86)\HDSDR)
+
+* (re)start HDSDR (select ExtIO_RTL.DLL if demanded)
+
 
