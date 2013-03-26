@@ -7,12 +7,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ExtIO_RTL", "ExtIO_RTL.vcxp
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187} = {349EE8F9-7D25-4909-AAF5-FF3FADE72187}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libusb-1.0 (static)", "..\libusbx\msvc\libusb_static.vcxproj", "{349EE8F9-7D25-4909-AAF5-FF3FADE72187}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rtl-sdr", "..\rtl-sdr\rtl-sdr.vcxproj", "{EEB3AA46-3A33-45A9-9F6F-B11CA66F12A3}"
 	ProjectSection(ProjectDependencies) = postProject
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187} = {349EE8F9-7D25-4909-AAF5-FF3FADE72187}
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libusb-1.0 (static)", "..\libusbx\msvc\libusb_static_2012.vcxproj", "{349EE8F9-7D25-4909-AAF5-FF3FADE72187}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -28,6 +28,12 @@ Global
 		{2F5638BD-6CEB-41F8-8ADF-BB270180EADE}.Release|Win32.ActiveCfg = Release|Win32
 		{2F5638BD-6CEB-41F8-8ADF-BB270180EADE}.Release|Win32.Build.0 = Release|Win32
 		{2F5638BD-6CEB-41F8-8ADF-BB270180EADE}.Release|x64.ActiveCfg = Release|Win32
+		{EEB3AA46-3A33-45A9-9F6F-B11CA66F12A3}.Debug|Win32.ActiveCfg = Debug|Win32
+		{EEB3AA46-3A33-45A9-9F6F-B11CA66F12A3}.Debug|Win32.Build.0 = Debug|Win32
+		{EEB3AA46-3A33-45A9-9F6F-B11CA66F12A3}.Debug|x64.ActiveCfg = Debug|Win32
+		{EEB3AA46-3A33-45A9-9F6F-B11CA66F12A3}.Release|Win32.ActiveCfg = Release|Win32
+		{EEB3AA46-3A33-45A9-9F6F-B11CA66F12A3}.Release|Win32.Build.0 = Release|Win32
+		{EEB3AA46-3A33-45A9-9F6F-B11CA66F12A3}.Release|x64.ActiveCfg = Release|Win32
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Debug|Win32.ActiveCfg = Debug|Win32
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Debug|Win32.Build.0 = Debug|Win32
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Debug|x64.ActiveCfg = Debug|x64
@@ -36,12 +42,6 @@ Global
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Release|Win32.Build.0 = Release|Win32
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Release|x64.ActiveCfg = Release|x64
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Release|x64.Build.0 = Release|x64
-		{EEB3AA46-3A33-45A9-9F6F-B11CA66F12A3}.Debug|Win32.ActiveCfg = Debug|Win32
-		{EEB3AA46-3A33-45A9-9F6F-B11CA66F12A3}.Debug|Win32.Build.0 = Debug|Win32
-		{EEB3AA46-3A33-45A9-9F6F-B11CA66F12A3}.Debug|x64.ActiveCfg = Debug|Win32
-		{EEB3AA46-3A33-45A9-9F6F-B11CA66F12A3}.Release|Win32.ActiveCfg = Release|Win32
-		{EEB3AA46-3A33-45A9-9F6F-B11CA66F12A3}.Release|Win32.Build.0 = Release|Win32
-		{EEB3AA46-3A33-45A9-9F6F-B11CA66F12A3}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
