@@ -80,6 +80,7 @@ static int directS_default=0; // Disabled
 
 static int TunerAGC_default=1;
 static int RTLAGC_default=0;
+static int HDSDR_AGC=2;
 static int OffsetT_default=1;
 static int device_default=0;
 
@@ -379,6 +380,45 @@ int  LIBRTL_API __stdcall SetAttenuator( int atten_idx )
 	last_gain=pos;
 	return 0;
 }
+
+extern "C"
+int   LIBRTL_API __stdcall ExtIoGetAGCs( int agc_idx, char * text )
+{
+	MessageBox(NULL, TEXT("ExtIoGetAGCs"),NULL, MB_OK);
+	switch ( agc_idx )
+	{
+		case 0:	_snprintf( text, 16, "%s", "None" );	
+				return 0;
+		case 1:	_snprintf( text, 16, "%s", "Tuner AGC" );	
+				return 0;
+		case 2:	_snprintf( text, 16, "%s", "RTL AGC" );	
+				return 0;
+		case 3:	_snprintf( text, 16, "%s", "RTL+Tuner AGC" );	
+				return 0;
+		default:	return -1;	// ERROR
+	}
+	return -1;	// ERROR
+}
+
+extern "C"
+int   LIBRTL_API __stdcall ExtIoGetActualAGCidx (void)
+{
+	//MessageBox(NULL, TEXT("ExtIoGetActualAGCidx"),NULL, MB_OK);
+	return HDSDR_AGC;
+}
+
+extern "C"
+int   LIBRTL_API __stdcall ExtIoSetAGC (int agc_idx)
+{
+	//MessageBox(NULL, TEXT("ExtIoSetAGC"),NULL, MB_OK);
+							TCHAR str[255];
+							_stprintf_s(str,255, TEXT("O valor é %d, era %d"), agc_idx, HDSDR_AGC);
+							MessageBox(NULL, str, NULL, MB_OK);
+	HDSDR_AGC = agc_idx;
+	//if (HDSDR_AGC==0) HDSDR_AGC=3;
+	return 0;
+}
+
 
 extern "C"
 int   LIBRTL_API __stdcall ExtIoGetSetting( int idx, char * description, char * value )

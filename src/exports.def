@@ -1,30 +1,32 @@
 LIBRARY ExtIO_RTL
 EXPORTS
-CloseHW = _CloseHW@0
-GetHWLO = _GetHWLO@0
-GetHWSR = _GetHWSR@0
-GetStatus = _GetStatus@0
-InitHW = _InitHW@12
-OpenHW = _OpenHW@0
-SetCallback = _SetCallback@4
-SetHWLO = _SetHWLO@4
-ShowGUI = _ShowGUI@0
-HideGUI = _HideGUI@0
-SwitchGUI = _SwitchGUI@0
-StartHW = _StartHW@4
-StopHW = _StopHW@0
+CloseHW 
+GetHWLO 
+GetHWSR 
+GetStatus
+InitHW 
+OpenHW 
+SetCallback 
+SetHWLO 
+ShowGUI 
+HideGUI
+SwitchGUI
+StartHW 
+StopHW
 
 ; Samplerate / Bandwidth:
-    ExtIoGetSrates                 = _ExtIoGetSrates@8
-    ExtIoGetActualSrateIdx         = _ExtIoGetActualSrateIdx@0
-    ExtIoSetSrate                  = _ExtIoSetSrate@4
+    ExtIoGetSrates                 
+    ExtIoGetActualSrateIdx        
+    ExtIoSetSrate                 
 
 ; Settings
-    ExtIoGetSetting                = _ExtIoGetSetting@12
-    ExtIoSetSetting                = _ExtIoSetSetting@8
+    ExtIoGetSetting            
+    ExtIoSetSetting               
 
-
-
-    GetAttenuators                 = _GetAttenuators@8
-    GetActualAttIdx                = _GetActualAttIdx@0
-    SetAttenuator                  = _SetAttenuator@4
+    GetAttenuators               
+    GetActualAttIdx               
+    SetAttenuator                 
+	
+;	ExtIoGetAGCs                
+;	ExtIoGetActualAGCidx		  
+;	ExtIoSetAGC                  
